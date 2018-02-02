@@ -1,0 +1,9 @@
+Setting up an SSH server with a proper access method
+– Setup 1 VM using Ubuntu in your laptop computer
+– Generate an SSH Key Pair
+– Place Private Key at Host OS
+– Place Public Key at Ubuntu VM
+– Give proper setup to SSH Server un Ubuntu VM
+– Demonstrate that your SSH login properly uses Public Key Authentication
+
+Please refer the page no. 31 and 32 in the Week 1_2 material for the further detail and distribution of the marks.
