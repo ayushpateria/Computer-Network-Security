@@ -49,19 +49,29 @@ def caeserShift(cipher, index, size, shift):
 		l[x] = chr(97+(((ord(cipher[x])-97) + shift)%26))
 	return "".join(l)
 
-
 cipher="yvrwxrvmeegfdxgfzywtxzlvlqccbgnpptlqcttwvfadgukginvvgcwkrgcmqrqdogicxzpjmrbccghmuvajecibtfqtppmktptiwsjxvcebihuvajkgkmpenzrhvkkgoxpjhjlvzatlqtgpegtmchozapgfgmabvzapenzztkvpmumjfsvavvvekgjqxhpscabgwdpbvyycwyfphakgcfnccgirqwqitvlqpgffddirfpinpzrntpurditfkdmgrkdgikftfccjukckcggkkwplulpxgikftwkxlxmafdiagzlsbxzbjtnrlsmjvscbvpycwkertztzrnhhkftgckgdgkemjkeflhmkkstgvrqhxosjnmjzqipgernlkorwwcpmugqmcbugilxggkctghfpirpzltwqycgxdpyshrkcctekycwizttmqfsglgcttlvyghvqeqibvlrxhp"
-#print "indexOfCoincidence of original message :: ", indexOfCoincidence(cipher)
+print "indexOfCoincidence of original message :: ", indexOfCoincidence(cipher)
 guessKeyLength(cipher, 2, 50)
-printFrequency(cipher, 5)
 
-for x in xrange(0,5):
-	print indexOfCoincidence(splitNthcharacter(cipher, x, 5)) 
+#guessed key length is 5 because index of coincidence for multiples of 5 is maximum and closest to 0.067
+keyLength = 5
+printFrequency(cipher, keyLength)
 
-cipher = caeserShift(cipher, 0, 5, 24)
-cipher = caeserShift(cipher, 1, 5, 9)
-cipher = caeserShift(cipher, 2, 5, 2)
-cipher = caeserShift(cipher, 3, 5, 11)
-cipher = caeserShift(cipher, 4, 5, 7)
+for x in xrange(0,keyLength):
+	print indexOfCoincidence(splitNthcharacter(cipher, x, keyLength)) 
 
-# print cipher
+cipher = caeserShift(cipher, 0, keyLength, 24)
+cipher = caeserShift(cipher, 1, keyLength, 9)
+cipher = caeserShift(cipher, 2, keyLength, 2)
+cipher = caeserShift(cipher, 3, keyLength, 11)
+cipher = caeserShift(cipher, 4, keyLength, 7)
+
+for x in xrange(0,len(cipher)):
+	if x % keyLength == 0:
+		sys.stdout.write(" ")
+#	if x%keyLength == 0 or x%keyLength == 3 or x%keyLength == 4 or x%keyLength == 2:
+	sys.stdout.write(colored(cipher[x], 'red'))
+	# else:
+	# 	sys.stdout.write(cipher[x])
+
+print "\n\n"
