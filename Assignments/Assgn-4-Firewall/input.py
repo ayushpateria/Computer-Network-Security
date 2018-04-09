@@ -6,10 +6,10 @@ import firewall
 from colorama import Fore, Style
 from netfilterqueue import NetfilterQueue
 
-def show_statistics(database_filename):
-    with open(database_filename, 'r', os.O_NONBLOCK) as fin:
-        data = json.load(fin)
-        for rule in data["rules"]:
+# def show_statistics(database_filename):
+#     with open(database_filename, 'r', os.O_NONBLOCK) as fin:
+#         data = json.load(fin)
+#         for rule in data["rules"]:
             
 
 
