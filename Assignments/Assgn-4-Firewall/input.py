@@ -67,6 +67,7 @@ def deleteRule(database_filename, rule):
         with open(database_filename, 'w', os.O_NONBLOCK) as fout:
             json.dump(data, fout)
             fout.close()
+            print(Fore.GREEN + "\tUPDATED RULE "+ Style.RESET_ALL)
         fin.close()
 
 def getParams(rule):
@@ -76,7 +77,7 @@ def getParams(rule):
     if "-p" in rule:
         index = rule.index("-p")
         if f.is_protocol_supported(rule[index+1]):
-            protocol = rule[index+1]
+            protocol = rule[index+1].lower()
         else:
             print("ERROR :: Protocol `%s` not supported." %(rule[index+1]))
             return None
@@ -90,6 +91,10 @@ def getParams(rule):
             return None
 
     if "-dport" in rule:
+        if protocol ==  "icmp":
+            print("ERROR :: Destination Port cannot be used with ICMP")
+            return None
+
         index = rule.index("-dport")
         valid = f.is_valid_port_range(rule[index+1])
         if valid == 2:
@@ -103,6 +108,10 @@ def getParams(rule):
             return None
 
     if "-sport" in rule:
+        if protocol ==  "icmp":
+            print("ERROR :: Source Port cannot be used with ICMP")
+            return None
+
         index = rule.index("-sport")
         valid = f.is_valid_port_range(rule[index+1])
         if valid == 2:
@@ -127,34 +136,32 @@ def getParams(rule):
 def setRule(database_filename, rule, newRule, isUpdate = False):
     open(database_filename, 'a',os.O_NONBLOCK )    
     with open(database_filename, 'r', os.O_NONBLOCK) as fin:
-        if os.stat(database_filename).st_size:
-            data = json.load(fin)
-            if data:
-                if "-I" in rule:
-                    pos = rule[rule.index("-I")+1]
-                    if not is_valid_int(pos):
-                        print("ERROR :: -I rule incorrect index")
-                        return
+        data = json.load(fin)
+        if data:
+            if "-I" in rule:
+                pos = rule[rule.index("-I")+1]
+                if not is_valid_int(pos):
+                    print("ERROR :: -I rule incorrect index")
+                    return
 
-                    pos = int(pos)
-                    if pos < 0 or pos >= len(data["rules"]):
-                        print("ERROR :: out of range for Rule Number")
-                        return
-                    
-                    if isUpdate:
-                        data["rules"][pos] = newRule
-                    else:    
-                        data["rules"].insert(pos, newRule)
-                else:
-                    data["rules"].append(newRule)
+                pos = int(pos)
+                if pos < 0 or pos >= len(data["rules"]):
+                    print("ERROR :: out of range for Rule Number")
+                    return
+                
+                if isUpdate:
+                    data["rules"][pos] = newRule
+                else:    
+                    data["rules"].insert(pos, newRule)
             else:
-                data = { "rules" : [newRule]}
-            fin.close()
+                data["rules"].append(newRule)
         else:
-            data = { "rules" : [newRule]}          
+            data = { "rules" : [newRule]}
+        fin.close()
         with open(database_filename, 'w', os.O_NONBLOCK) as fout:
             json.dump(data, fout)
             fout.close()
+            print(Fore.GREEN + "\tUPDATED RULE "+ Style.RESET_ALL)
 
 def getInput(database_filename = "database.json"):
     print(Fore.GREEN + "%s:~/# "%(getpass.getuser()) + Style.RESET_ALL, end='')
@@ -184,10 +191,12 @@ def getInput(database_filename = "database.json"):
                 print("ERROR :: Incorrect input. -I not present")
             else:
                 newRule = getParams(rule)
-                setRule(database_filename, rule, newRule, True)
+                if newRule:
+                    setRule(database_filename, rule, newRule, True)
         elif action == "add":
             newRule = getParams(rule)
-            setRule(database_filename, rule, newRule)
+            if newRule:
+                setRule(database_filename, rule, newRule)
         else:
             print("ERROR :: Incorrect action")
 
