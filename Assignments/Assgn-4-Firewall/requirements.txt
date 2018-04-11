@@ -1,6 +1,4 @@
 IPy
-json
-shlex
 getpass
 colorama
 netfilterqueue
