@@ -1,8 +1,12 @@
 import os
+import sys
+import math
 import json
 import shlex
 import getpass
 import firewall
+import numpy as np
+import matplotlib.pyplot as plt
 from colorama import Fore, Style
 from netfilterqueue import NetfilterQueue
 
@@ -32,8 +36,41 @@ usage:  ADD  [-A] [-I Rule_Number] [-p Protocol] [-s IP/CIDR] [-sport Port/Port:
 
         SHOW
 
+        CLEAR
+
+        PLOT
+
         HELP
+
+        EXIT
         \n""")
+
+
+def plotPPS(log_filename):
+    with open(log_filename, 'r', os.O_NONBLOCK) as fin:
+        lines = fin.read().split('\n')
+        if len(lines) == 0:
+            print("No data point")
+            return
+        print("Got {} data points".format(len(lines)))
+        x = [math.modf(float(lines[0].split()[0]))[1]]
+        y = [1]
+        for data in lines:
+            if data:    
+                time = math.modf(float(data.split()[0]))[1]
+                if time == x[-1]:
+                    y[-1] += 1
+                else:
+                    x.append(time)
+                    y.append(1)
+        x = list(range(1, len(y)+1))
+        print("Maximum PPS {} at time {} ".format(np.max(y), x[np.argmax(y)]))
+        plt.plot(x, y, linestyle='dashed', c='blue', label='PPS')
+        plt.title("No. of packets vs time")
+        plt.xlabel("time")
+        plt.ylabel("#packets")
+        plt.legend(loc='best')
+        plt.show()
 
 def showStatistics(database_filename):
     print("Chain INPUT (policy DROP)")
@@ -163,14 +200,20 @@ def setRule(database_filename, rule, newRule, isUpdate = False):
             fout.close()
             print(Fore.GREEN + "\tUPDATED RULE "+ Style.RESET_ALL)
 
-def getInput(database_filename = "database.json"):
+def getInput(database_filename, log_filename):
     print(Fore.GREEN + "%s:~/# "%(getpass.getuser()) + Style.RESET_ALL, end='')
     rule = shlex.split(input())
     if len(rule) == 0:
       print("ERROR :: No input")
     else:
         action = rule[0].lower()
-        if action == "help":
+        if action == "clear":
+            os.system('clear')
+        elif action == "exit":
+            sys.exit()    
+        elif action == "plot":
+            plotPPS(log_filename)
+        elif action == "help":
             help()
         elif action == "show":
             showStatistics(database_filename)
@@ -202,5 +245,5 @@ def getInput(database_filename = "database.json"):
 
 help()
 while True:
-    getInput()
+    getInput("database.json", "log.txt")
 

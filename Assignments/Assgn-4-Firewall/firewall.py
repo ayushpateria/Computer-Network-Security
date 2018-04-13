@@ -50,7 +50,7 @@ class Firewall:
         try:
             port = packet[startIndex: startIndex + 2]
             port = struct.unpack('!H', port)
-            return port
+            return self.strip_format(port)
         except struct.error:
             return None         
 
