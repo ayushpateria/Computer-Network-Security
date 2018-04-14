@@ -4,11 +4,9 @@ import math
 import json
 import shlex
 import getpass
-import firewall
 import numpy as np
 import matplotlib.pyplot as plt
 from colorama import Fore, Style
-from netfilterqueue import NetfilterQueue
 
 def is_valid_int(st):
     try:
@@ -44,6 +42,33 @@ usage:  ADD  [-A] [-I Rule_Number] [-p Protocol] [-s IP/CIDR] [-sport Port/Port:
 
         EXIT
         \n""")
+
+
+def is_valid_int(st):
+    try:
+        int(st)
+        return True
+    except ValueError:
+        return False
+        
+def is_valid_port_range(self, port):
+    if ":" in port:
+        if is_valid_int(port[0:port.find(":")]) and is_valid_int(port[port.find(":")+1:]):
+            return 2
+        else:
+            return 0
+    elif is_valid_int(port):
+        return 1
+    else:
+        return 0
+
+
+def is_action_supported(action):
+    return (action == "ACCEPT") or (action == "DROP")
+
+def is_protocol_supported(protocol):
+    return (protocol == 'all') or (protocol == 'tcp') or (protocol == 'udp') or (protocol == 'icmp')
+
 
 
 def plotPPS(log_filename):
@@ -107,13 +132,27 @@ def deleteRule(database_filename, rule):
             print(Fore.GREEN + "\tUPDATED RULE "+ Style.RESET_ALL)
         fin.close()
 
+def is_valid_IP_range(data):
+    if "/" in data:
+        netmask = data[data.find("/")+1]
+        try:
+            inetmask = int(netmask)
+            if inetmask < 0:
+                print(Fore.YELLOW + "ERROR :: Invalid netmask `" + netmask + "` specified" + Style.RESET_ALL)
+                return False
+            return is_valid_IP_address(data[0:data.find("/")])
+        except ValueError:
+            print(Fore.YELLOW + "ERROR :: Invalid netmask `" + netmask + "` specified" + Style.RESET_ALL)
+            return False
+    else:
+        return is_valid_IP_address(data)
+            
 def getParams(rule):
-    f = firewall.Firewall()
     protocol, sourceip, sport1, sport2, dport1, dport2, action = "all", "any", None, None, None, None, "ACCEPT"
 
     if "-p" in rule:
         index = rule.index("-p")
-        if f.is_protocol_supported(rule[index+1]):
+        if is_protocol_supported(rule[index+1]):
             protocol = rule[index+1].lower()
         else:
             print("ERROR :: Protocol `%s` not supported." %(rule[index+1]))
@@ -121,7 +160,7 @@ def getParams(rule):
 
     if "-s" in rule:
         index = rule.index("-s")
-        if f.is_valid_IP_range(rule[index+1]):
+        if is_valid_IP_range(rule[index+1]):
             sourceip = rule[index+1]
         else:
             print("ERROR :: Source IP `%s` is incorrect." %(rule[index+1]))
@@ -133,7 +172,7 @@ def getParams(rule):
             return None
 
         index = rule.index("-dport")
-        valid = f.is_valid_port_range(rule[index+1])
+        valid = is_valid_port_range(rule[index+1])
         if valid == 2:
             dport1 = int(rule[index+1][:rule[index+1].index(":")])
             dport2 = int(rule[index+1][rule[index+1].index(":") + 1:])
@@ -150,7 +189,7 @@ def getParams(rule):
             return None
 
         index = rule.index("-sport")
-        valid = f.is_valid_port_range(rule[index+1])
+        valid = is_valid_port_range(rule[index+1])
         if valid == 2:
             sport1 = int(rule[index+1][:rule[index+1].index(":")])
             sport2 = int(rule[index+1][rule[index+1].index(":") + 1:])
@@ -163,7 +202,7 @@ def getParams(rule):
 
     if "-j" in rule:
         index = rule.index("-j")
-        if f.is_action_supported(rule[index+1].upper()):
+        if is_action_supported(rule[index+1].upper()):
             action = rule[index+1].upper()
         else:
             print("ERROR :: Action `%s` is not supported." %(rule[index+1]))

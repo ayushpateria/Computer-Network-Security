@@ -6,69 +6,21 @@ import time
 import psutil
 from IPy import IP
 from colorama import Fore, Style
-from cli import setRule, getParams
+from cli import *
 
 class Firewall:
     def __init__(self):
         self.scanLog = []
-
-    # Since struct unpack gives a tuple as result, this function removes unnecessary characters (,) and returns the number
-    def strip_format(self, format_str):
-        new_str = str(format_str)
-        return int(new_str[1: len(new_str) - 2])
-    
-    def is_valid_int(self, st):
-        try:
-            int(st)
-            return True
-        except ValueError:
-            return False
-
-    # functions for protocols
-    def get_protocol(self, protocol):
-        if (protocol == 1):
-            return "icmp"
-        elif (protocol == 6):
-            return 'tcp'
-        elif (protocol == 17):
-            return 'udp'
-        else:
-            return None
-
-    def is_action_supported(self, action):
-        return (action == "ACCEPT") or (action == "DROP")
-
-    def is_protocol_supported(self, protocol):
-        return (protocol == 'all') or (protocol == 'tcp') or (protocol == 'udp') or (protocol == 'icmp')
-
-    def get_protocol_packet_length(self, packet):
-        try:
-            protocol = struct.unpack('!B', packet[9:10])
-            total_length = struct.unpack('!H', packet[2:4])
-            return self.strip_format(protocol), self.strip_format(total_length)
-        except struct.error as e:
-            print(e)
-            return None, None
 
     # functions for port
     def get_port(self, packet, startIndex):
         try:
             port = packet[startIndex: startIndex + 2]
             port = struct.unpack('!H', port)
-            return self.strip_format(port)
+            return strip_format(port)
         except struct.error:
             return None         
 
-    def is_valid_port_range(self, port):
-        if ":" in port:
-            if self.is_valid_int(port[0:port.find(":")]) and self.is_valid_int(port[port.find(":")+1:]):
-                return 2
-            else:
-                return 0
-        elif self.is_valid_int(port):
-            return 1
-        else:
-            return 0
 
     def is_port_in_range(self, port , start_port, end_port):
         return port >= start_port and port <= end_port
@@ -77,7 +29,7 @@ class Firewall:
     def get_ip_header_length(self, packet):
         try:
             ip_header_length = struct.unpack('!B', packet[0:1])
-            return self.strip_format(ip_header_length)
+            return strip_format(ip_header_length)
         except struct.error as e:
             print(e)
             print(packet[0:1])
@@ -112,20 +64,29 @@ class Firewall:
         else:
             return data, None
 
-    def is_valid_IP_range(self, data):
-        if "/" in data:
-            netmask = data[data.find("/")+1]
-            try:
-                inetmask = int(netmask)
-                if inetmask < 0:
-                    print(Fore.YELLOW + "ERROR :: Invalid netmask `" + netmask + "` specified" + Style.RESET_ALL)
-                    return False
-                return self.is_valid_IP_address(data[0:data.find("/")])
-            except ValueError:
-                print(Fore.YELLOW + "ERROR :: Invalid netmask `" + netmask + "` specified" + Style.RESET_ALL)
-                return False
+    # Since struct unpack gives a tuple as result, this function removes unnecessary characters (,) and returns the number
+    def strip_format(self, format_str):
+        new_str = str(format_str)
+        return int(new_str[1: len(new_str) - 2])
+
+    def get_protocol(self, protocol):
+        if (protocol == 1):
+            return "icmp"
+        elif (protocol == 6):
+            return 'tcp'
+        elif (protocol == 17):
+            return 'udp'
         else:
-            return self.is_valid_IP_address(data)
+            return None
+
+    def get_protocol_packet_length(self, packet):
+        try:
+            protocol = struct.unpack('!B', packet[9:10])
+            total_length = struct.unpack('!H', packet[2:4])
+            return self.strip_format(protocol), self.strip_format(total_length)
+        except struct.error as e:
+            print(e)
+            return None, None
 
     def is_IP_in_range(self, ip, allowed_ip):
         allowed_ip, netmask = self.get_IP_netmask(allowed_ip)
