@@ -1,9 +1,6 @@
 IPy
-<<<<<<< HEAD
 numpy
 getpass
-=======
->>>>>>> cf1cc52e7ac61ae7c2bf9892ddb896e03b99a9bf
 colorama
 malplotlib
 netfilterqueue
