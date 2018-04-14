@@ -12,6 +12,7 @@ from cli import *
 class Firewall:
     def __init__(self):
         self.scanLog = []
+        self.scanLimits = {0: 5, 1: -1, 6: 5, 17: 50} # 0 is for default, -1 is no limit
 
     # functions for port
     def get_port(self, packet, startIndex):
@@ -108,7 +109,7 @@ class Firewall:
             return None
 
     # check_port_scan works by keeping the record of invalid port requested by each IP in last seconds in memory.
-    def check_port_scan(self, srcip, port):
+    def check_port_scan(self, srcip, port, prot):
        
         portsAvail = []
         for x in psutil.net_connections("all"):
@@ -124,6 +125,11 @@ class Firewall:
         ts = int(time.time() / 60)
         newLog = []
         updated = False
+        threshhold = self.scanLimits[0]
+        if prot in self.scanLimits:
+            threshhold = self.scanLimits[prot]
+        if threshhold == -1:
+            return True
         for i, record in enumerate(self.scanLog):
             if record[0] == ts:
                 print(srcip)
@@ -138,7 +144,8 @@ class Firewall:
         
         self.scanLog = newLog
         print(self.scanLog)
-        if invalidCount > 5:
+        
+        if invalidCount > threshhold:
             print("Port scan detected, blocking ", srcip)
             rule = shlex.split("ADD -I 0 -s " + str(srcip) + " -j DROP")
             print(rule)
@@ -194,7 +201,7 @@ class Firewall:
             if not self.is_IP_in_range(socket.inet_ntoa(src_addr), rule["sourceip"]):
                 print(Fore.YELLOW + "FILTER :: IP not in specified range" + Style.RESET_ALL)
                 return False
-
+        print("PROTOCOL", protocol)
         #filter ports
         if ((protocol == 6) or (protocol == 17)) and ((rule["protocol"] == "all") or (rule["protocol"] == "tcp") or (rule["protocol"] == "udp")):
             if rule["sport1"]:
@@ -223,6 +230,6 @@ class Firewall:
 
         # Check for a potential port scan 
         dport = self.get_port(packet, ((ip_header) * 4) + 2)    
-        if rule["action"] == "ACCEPT" and not self.check_port_scan(socket.inet_ntoa(src_addr), dport):
+        if rule["action"] == "ACCEPT" and not self.check_port_scan(socket.inet_ntoa(src_addr), dport, protocol):
             return False
         return True
