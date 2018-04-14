@@ -1,49 +1,18 @@
 #Program to build a mini firewall using python
 import math
 import socket
+import shlex
 import struct
+import time
+import psutil
 from IPy import IP
 from colorama import Fore, Style
+from cli import *
 
 class Firewall:
-
-    # Since struct unpack gives a tuple as result, this function removes unnecessary characters (,) and returns the number
-    def strip_format(self, format_str):
-        new_str = str(format_str)
-        return int(new_str[1: len(new_str) - 2])
-    
-    def is_valid_int(self, st):
-        try:
-            int(st)
-            return True
-        except ValueError:
-            return False
-
-    # functions for protocols
-    def get_protocol(self, protocol):
-        if (protocol == 1):
-            return "icmp"
-        elif (protocol == 6):
-            return 'tcp'
-        elif (protocol == 17):
-            return 'udp'
-        else:
-            return None
-
-    def is_action_supported(self, action):
-        return (action == "ACCEPT") or (action == "DROP")
-
-    def is_protocol_supported(self, protocol):
-        return (protocol == 'all') or (protocol == 'tcp') or (protocol == 'udp') or (protocol == 'icmp')
-
-    def get_protocol_packet_length(self, packet):
-        try:
-            protocol = struct.unpack('!B', packet[9:10])
-            total_length = struct.unpack('!H', packet[2:4])
-            return self.strip_format(protocol), self.strip_format(total_length)
-        except struct.error as e:
-            print(e)
-            return None, None
+    def __init__(self):
+        self.scanLog = []
+        self.scanLimits = {0: 5, 1: -1, 6: 5, 17: 50} # 0 is for default, -1 is no limit
 
     # functions for port
     def get_port(self, packet, startIndex):
@@ -54,16 +23,6 @@ class Firewall:
         except struct.error:
             return None         
 
-    def is_valid_port_range(self, port):
-        if ":" in port:
-            if self.is_valid_int(port[0:port.find(":")]) and self.is_valid_int(port[port.find(":")+1:]):
-                return 2
-            else:
-                return 0
-        elif self.is_valid_int(port):
-            return 1
-        else:
-            return 0
 
     def is_port_in_range(self, port , start_port, end_port):
         return port >= start_port and port <= end_port
@@ -77,21 +36,7 @@ class Firewall:
             print(e)
             print(packet[0:1])
             return None
-
-    def is_valid_IP_address(self, ext_addr):
-        if isinstance(ext_addr, str):
-            try:
-                IP(ext_addr)
-                return True
-            except ValueError:
-                return False
-        else:
-            try:
-               socket.inet_ntoa(ext_addr)
-               return True
-            except socket.error:
-               return False
-
+    
     def get_IP_address(self, data, netmask = None):
         data = ''.join(data.split("."))
         if netmask:
@@ -107,20 +52,29 @@ class Firewall:
         else:
             return data, None
 
-    def is_valid_IP_range(self, data):
-        if "/" in data:
-            netmask = data[data.find("/")+1]
-            try:
-                inetmask = int(netmask)
-                if inetmask < 0:
-                    print(Fore.YELLOW + "ERROR :: Invalid netmask `" + netmask + "` specified" + Style.RESET_ALL)
-                    return False
-                return self.is_valid_IP_address(data[0:data.find("/")])
-            except ValueError:
-                print(Fore.YELLOW + "ERROR :: Invalid netmask `" + netmask + "` specified" + Style.RESET_ALL)
-                return False
+    # Since struct unpack gives a tuple as result, this function removes unnecessary characters (,) and returns the number
+    def strip_format(self, format_str):
+        new_str = str(format_str)
+        return int(new_str[1: len(new_str) - 2])
+
+    def get_protocol(self, protocol):
+        if (protocol == 1):
+            return "icmp"
+        elif (protocol == 6):
+            return 'tcp'
+        elif (protocol == 17):
+            return 'udp'
         else:
-            return self.is_valid_IP_address(data)
+            return None
+
+    def get_protocol_packet_length(self, packet):
+        try:
+            protocol = struct.unpack('!B', packet[9:10])
+            total_length = struct.unpack('!H', packet[2:4])
+            return self.strip_format(protocol), self.strip_format(total_length)
+        except struct.error as e:
+            print(e)
+            return None, None
 
     def is_IP_in_range(self, ip, allowed_ip):
         allowed_ip, netmask = self.get_IP_netmask(allowed_ip)
@@ -154,6 +108,51 @@ class Firewall:
         except struct.error:
             return None
 
+    # check_port_scan works by keeping the record of invalid port requested by each IP in last seconds in memory.
+    def check_port_scan(self, srcip, port, prot):
+       
+        portsAvail = []
+        for x in psutil.net_connections("all"):
+            if hasattr(x.laddr, 'port'):
+                portsAvail.append(x.laddr.port)
+        invalidPort = False
+        print(portsAvail, port)
+        if port not in portsAvail:
+            invalidPort = True
+        else:
+            return True
+        invalidCount = 1
+        ts = int(time.time() / 60)
+        newLog = []
+        updated = False
+        threshhold = self.scanLimits[0]
+        if prot in self.scanLimits:
+            threshhold = self.scanLimits[prot]
+        if threshhold == -1:
+            return True
+        for i, record in enumerate(self.scanLog):
+            if record[0] == ts:
+                print(srcip)
+                if record[1] == srcip:
+                    # Increment the count for invalid ports
+                    record[2] += 1
+                    invalidCount = record[2]
+                    updated = True
+                newLog.append(record)
+        if not updated:
+            newLog.append([ts, srcip, 1])
+        
+        self.scanLog = newLog
+        print(self.scanLog)
+        
+        if invalidCount > threshhold:
+            print("Port scan detected, blocking ", srcip)
+            rule = shlex.split("ADD -I 0 -s " + str(srcip) + " -j DROP")
+            print(rule)
+            setRule("database.json", rule, getParams(rule))
+            return False
+        return True
+
     def handle_packet(self, packet, rule):
         #network packets are big-endian 
         ip_header = self.get_ip_header_length(packet)
@@ -181,7 +180,7 @@ class Firewall:
             return None
 
         src_addr, dst_addr = packet[12:16], packet[16:20]
-        if not (self.is_valid_IP_address(src_addr) and self.is_valid_IP_address(dst_addr)): # check valid address.
+        if not (is_valid_IP_address(src_addr) and is_valid_IP_address(dst_addr)): # check valid address.
             print(Fore.YELLOW + "ERROR :: IP addresses are incorrect" + Style.RESET_ALL)
             return None
 
@@ -202,7 +201,7 @@ class Firewall:
             if not self.is_IP_in_range(socket.inet_ntoa(src_addr), rule["sourceip"]):
                 print(Fore.YELLOW + "FILTER :: IP not in specified range" + Style.RESET_ALL)
                 return False
-
+        print("PROTOCOL", protocol)
         #filter ports
         if ((protocol == 6) or (protocol == 17)) and ((rule["protocol"] == "all") or (rule["protocol"] == "tcp") or (rule["protocol"] == "udp")):
             if rule["sport1"]:
@@ -229,4 +228,8 @@ class Firewall:
                 print(Fore.YELLOW + "ERROR :: ICMP Type is incorrect" + Style.RESET_ALL)
                 return None
 
+        # Check for a potential port scan 
+        dport = self.get_port(packet, ((ip_header) * 4) + 2)    
+        if rule["action"] == "ACCEPT" and not self.check_port_scan(socket.inet_ntoa(src_addr), dport, protocol):
+            return False
         return True

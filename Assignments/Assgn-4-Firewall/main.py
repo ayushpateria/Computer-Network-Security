@@ -9,6 +9,8 @@ from netfilterqueue import NetfilterQueue
 
 global database_filename, total_packets, packet_accepted
 
+f = firewall.Firewall()
+
 def commit(payload, action,):
     global packet_accepted
 
@@ -21,10 +23,8 @@ def commit(payload, action,):
         payload.drop()
 
 def cb(payload):
-    global database_filename, total_packets
-    
+    global database_filename, total_packets  
     packet = payload.get_payload()
-    f = firewall.Firewall()
     total_packets += 1
     ruleNumber = -1
 
