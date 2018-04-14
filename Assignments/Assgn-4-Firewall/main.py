@@ -50,7 +50,7 @@ def main(queue_num):
     database_filename =  "database.json"
     total_packets = 0
     packet_accepted = 0
-    nfqueue = NetfilterQueue()
+    nfqueue = NetfilterQueue(max_len=10000)
     nfqueue.bind(queue_num, cb)
     print("Started Firewall .... ")
     

@@ -34,17 +34,18 @@ usage:  ADD  [-A] [-I Rule_Number] [-p Protocol] [-s IP/CIDR] [-sport Port/Port:
 
         DELETE all/Rule_Number
 
-        SHOW
+        SHOW     -- show all rules  
 
-        CLEAR
+        CLRSCR   -- clear screen
 
-        PLOT
+        PLOT     -- show statistics
+
+        CLEAR  -- empty log.txt
 
         HELP
 
         EXIT
         \n""")
-
 
 def plotPPS(log_filename):
     with open(log_filename, 'r', os.O_NONBLOCK) as fin:
@@ -207,8 +208,10 @@ def getInput(database_filename, log_filename):
       print("ERROR :: No input")
     else:
         action = rule[0].lower()
-        if action == "clear":
+        if action == "clrscr":
             os.system('clear')
+        elif action == "clear":
+            open(log_filename, 'w').close()            
         elif action == "exit":
             sys.exit()    
         elif action == "plot":
