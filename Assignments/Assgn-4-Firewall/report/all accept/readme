@@ -1,8 +1,0 @@
-iperf3 --server --port 5201  -f K -V
-
-iperf3 --client 172.24.1.102 --port 5201 --version4   -f K -V  --bandwidth 50M --time 60 --parallel 30  
-
-firewall
-
-
-all protocols accept

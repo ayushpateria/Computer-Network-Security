@@ -103,3 +103,7 @@ ENV/
 
 .zip
 .tar.gz
+
+*.pcap
+
+log.txt

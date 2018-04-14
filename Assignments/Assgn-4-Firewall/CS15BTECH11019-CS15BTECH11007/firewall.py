@@ -118,7 +118,6 @@ class Firewall:
             if hasattr(x.laddr, 'port'):
                 portsAvail.append(x.laddr.port)
         invalidPort = False
-        print(portsAvail, port)
         if port not in portsAvail:
             invalidPort = True
         else:
@@ -134,7 +133,6 @@ class Firewall:
             return True
         for i, record in enumerate(self.scanLog):
             if record[0] == ts:
-                print(srcip)
                 if record[1] == srcip:
                     # Increment the count for invalid ports
                     record[2] += 1
@@ -145,12 +143,10 @@ class Firewall:
             newLog.append([ts, srcip, 1])
         
         self.scanLog = newLog
-        print(self.scanLog)
         
         if invalidCount > threshhold:
             print("Port scan detected, blocking ", srcip)
             rule = shlex.split("ADD -I 0 -s " + str(srcip) + " -j DROP")
-            print(rule)
             setRule("database.json", rule, getParams(rule))
             return False
         return True
