@@ -2,10 +2,15 @@
 import math
 import socket
 import struct
+import time
+import psutil
 from IPy import IP
 from colorama import Fore, Style
+from cli import setRule, getParams
 
 class Firewall:
+    def __init__(self):
+        self.scanLog = []
 
     # Since struct unpack gives a tuple as result, this function removes unnecessary characters (,) and returns the number
     def strip_format(self, format_str):
@@ -154,6 +159,44 @@ class Firewall:
         except struct.error:
             return None
 
+    # check_port_scan works by keeping the record of invalid port requested by each IP in last seconds in memory.
+    def check_port_scan(self, srcip, port):
+       
+        portsAvail = []
+        for x in psutil.net_connections("all"):
+            if hasattr(x.laddr, 'port'):
+                portsAvail.append(x.laddr.port)
+        invalidPort = False
+        print(portsAvail, port)
+        if port not in portsAvail:
+            invalidPort = True
+        else:
+            return True
+        invalidCount = 1
+        ts = int(time.time() / 60)
+        newLog = []
+        updated = False
+        for i, record in enumerate(self.scanLog):
+            if record[0] == ts:
+                print(srcip)
+                if record[1] == srcip:
+                    # Increment the count for invalid ports
+                    record[2] += 1
+                    invalidCount = record[2]
+                    updated = True
+                newLog.append(record)
+        if not updated:
+            newLog.append([ts, srcip, 1])
+        
+        self.scanLog = newLog
+        print(self.scanLog)
+        if invalidCount > 5:
+            print("Port scan detected, blocking ", srcip)
+            rule = "ADD -i 0 -s " + str(srcip) + " -j DROP"
+            setRule("database.json", rule, getParams(rule))
+            return False
+        return True
+
     def handle_packet(self, packet, rule):
         #network packets are big-endian 
         ip_header = self.get_ip_header_length(packet)
@@ -229,4 +272,8 @@ class Firewall:
                 print(Fore.YELLOW + "ERROR :: ICMP Type is incorrect" + Style.RESET_ALL)
                 return None
 
+        # Check for a potential port scan 
+        dport = self.get_port(packet, ((ip_header) * 4) + 2)    
+        if not self.check_port_scan(src_addr, dport):
+            return False
         return True
