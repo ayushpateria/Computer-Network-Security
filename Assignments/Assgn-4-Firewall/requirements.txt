@@ -1,6 +1,6 @@
+psutil
 IPy
 numpy
-getpass
 colorama
 malplotlib
 netfilterqueue
