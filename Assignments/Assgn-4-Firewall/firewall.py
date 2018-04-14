@@ -1,6 +1,7 @@
 #Program to build a mini firewall using python
 import math
 import socket
+import shlex
 import struct
 import time
 import psutil
@@ -17,7 +18,7 @@ class Firewall:
         try:
             port = packet[startIndex: startIndex + 2]
             port = struct.unpack('!H', port)
-            return strip_format(port)
+            return self.strip_format(port)
         except struct.error:
             return None         
 
@@ -29,26 +30,12 @@ class Firewall:
     def get_ip_header_length(self, packet):
         try:
             ip_header_length = struct.unpack('!B', packet[0:1])
-            return strip_format(ip_header_length)
+            return self.strip_format(ip_header_length)
         except struct.error as e:
             print(e)
             print(packet[0:1])
             return None
-
-    def is_valid_IP_address(self, ext_addr):
-        if isinstance(ext_addr, str):
-            try:
-                IP(ext_addr)
-                return True
-            except ValueError:
-                return False
-        else:
-            try:
-               socket.inet_ntoa(ext_addr)
-               return True
-            except socket.error:
-               return False
-
+    
     def get_IP_address(self, data, netmask = None):
         data = ''.join(data.split("."))
         if netmask:
@@ -153,7 +140,8 @@ class Firewall:
         print(self.scanLog)
         if invalidCount > 5:
             print("Port scan detected, blocking ", srcip)
-            rule = "ADD -i 0 -s " + str(srcip) + " -j DROP"
+            rule = shlex.split("ADD -I 0 -s " + str(srcip) + " -j DROP")
+            print(rule)
             setRule("database.json", rule, getParams(rule))
             return False
         return True
@@ -185,7 +173,7 @@ class Firewall:
             return None
 
         src_addr, dst_addr = packet[12:16], packet[16:20]
-        if not (self.is_valid_IP_address(src_addr) and self.is_valid_IP_address(dst_addr)): # check valid address.
+        if not (is_valid_IP_address(src_addr) and is_valid_IP_address(dst_addr)): # check valid address.
             print(Fore.YELLOW + "ERROR :: IP addresses are incorrect" + Style.RESET_ALL)
             return None
 
@@ -235,6 +223,6 @@ class Firewall:
 
         # Check for a potential port scan 
         dport = self.get_port(packet, ((ip_header) * 4) + 2)    
-        if not self.check_port_scan(src_addr, dport):
+        if rule["action"] == "ACCEPT" and not self.check_port_scan(socket.inet_ntoa(src_addr), dport):
             return False
         return True

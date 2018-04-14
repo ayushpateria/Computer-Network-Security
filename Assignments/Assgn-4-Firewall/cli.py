@@ -1,5 +1,7 @@
 import os
+import socket
 import sys
+from IPy import IP
 import math
 import json
 import shlex
@@ -131,6 +133,22 @@ def deleteRule(database_filename, rule):
             fout.close()
             print(Fore.GREEN + "\tUPDATED RULE "+ Style.RESET_ALL)
         fin.close()
+
+def is_valid_IP_address(ext_addr):
+    if isinstance(ext_addr, str):
+        try:
+            IP(ext_addr)
+            return True
+        except ValueError:
+               return False
+    else:
+        try:
+           socket.inet_ntoa(ext_addr)
+           return True
+        except socket.error:
+           return False
+
+
 
 def is_valid_IP_range(data):
     if "/" in data:
@@ -281,8 +299,8 @@ def getInput(database_filename, log_filename):
                 setRule(database_filename, rule, newRule)
         else:
             print("ERROR :: Incorrect action")
-
-help()
-while True:
-    getInput("database.json", "log.txt")
+if __name__ == "__main__":
+    help()
+    while True:
+        getInput("database.json", "log.txt")
 
