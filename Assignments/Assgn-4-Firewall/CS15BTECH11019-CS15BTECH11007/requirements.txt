@@ -1,7 +1,0 @@
-IPy
-numpy
-psutil
-getpass
-colorama
-malplotlib
-netfilterqueue

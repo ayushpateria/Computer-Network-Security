@@ -1,7 +1,8 @@
 IPy
 numpy
 psutil
-getpass
+netaddr
 colorama
 malplotlib
 netfilterqueue
+getpass

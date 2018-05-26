@@ -102,9 +102,9 @@ usage:  ADD  [-A] [-I Rule_Number] [-p Protocol] [-s IP/CIDR] [-sport Port/Port:
 
         CLRSCR   -- clear screen
 
-        PLOT     -- show statistics
+        PLOT     -- show plot of packets processed per second vs time
 
-        CLEAR  -- empty log.txt
+        CLEAR    -- empty log.txt
 
         HELP
 
