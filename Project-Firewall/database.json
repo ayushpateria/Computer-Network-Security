@@ -1,1 +1,0 @@
-{"rules": [{"dport2": null, "dport1": null, "sport2": null, "sourceip": "any", "action": "DROP", "protocol": "all", "sport1": null, "mac": "any"}]}
