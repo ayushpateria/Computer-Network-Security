@@ -25,4 +25,4 @@ A screenshot of the output of cli.py has been attached for your reference
 + The incoming packets and detailed analysis of the firewall can be seen in the output of main.py and cli.py
 
 
-**Please note that a detailed report describing all abilities and a thorough anaylysis of it's performance can be found in [`Report.pdf`](https://github.com/sipian/Computer-Network-Security/blob/master/Project-Firewall/Report.pdf)**
+**Please note that a detailed report describing all abilities and a thorough anaylysis of the firewall's performance can be found in [`Report.pdf`](https://github.com/sipian/Computer-Network-Security/blob/master/Project-Firewall/Report.pdf)**
